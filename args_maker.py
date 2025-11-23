@@ -45,15 +45,12 @@ def make_baseline_args(is_parsered=True):
 
 def predict_args():
     parser = make_baseline_args(is_parsered=False)
-    parser.add_argument("--model_path", type=str, help="")
-    parser.add_argument("--fasta_file", type=str, help="")
-    parser.add_argument("--pdb_dir", type=str, help="")
-    parser.add_argument("--model_path", type=str, help="")
-    parser.add_argument("--model_path", type=str, help="")
-    parser.add_argument("--data_file", type=str, default="Dataset/fasta_data", help="file to fasta data for prediction")
-    parser.add_argument("--data_fasta", type=str, default="signalp5_benchmark_set.fasta", help="fasta file for prediction")
-    parser.add_argument("-o", "--output_dir", type=str, default="output", help="path to save logs and prediction outcome")
-    parser.add_argument("--report_metrics_per_kingdom", default=True, help="Report per-kingdom-metrics on test set or not.")
+    parser.add_argument("--model_path", type=str, default='model_weight/model.pt', help="Path to the trained model checkpoint (.pt file).")
+    parser.add_argument("--fasta_file", type=str, default='data/seq_data/example.fasta', help="Path to input protein sequences in FASTA format.")
+    parser.add_argument("--pdb_dir", type=str, default='data/struc_data', help="Directory containing input protein structure files (e.g., PDB/mmCIF).")
+    parser.add_argument("--seq_emb_dir", type=str, default='data/seq_emb', help="Directory to read/write sequence embeddings.")
+    parser.add_argument("--struc_emb_dir", type=str, default='data/struc_emb', help="Directory to read/write structure embeddings.")
+    parser.add_argument("-o", "--output_dir", type=str, default="output", help="Path to save logs and prediction results.")
     parser.add_argument("--kingdom_agonistic", default=False, help="Mask all kingdoms to one specified kingdom or not.")
 
     args = parser.parse_args()

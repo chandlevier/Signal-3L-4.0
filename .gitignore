@@ -1,0 +1,5 @@
+model_weight/*
+output/*
+__pycache__/
+module/__pycache__/
+*.pyc

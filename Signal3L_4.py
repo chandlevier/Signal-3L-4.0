@@ -10,7 +10,7 @@ from module.CNN import TextCNN
 from module.signalp6_CRF import CRF
 from module.CoAttention import MultiHeadCoAttentionEncoder
 from module.TransformerEncoder import TransformerEncoder
-from module.Norm import NormedLinear
+from module.NormLayer import NormedLinear
 from utils.basic_utils import clear_memory
 
 SIGNALP_KINGDOM_DICT = {"EUKARYA": 0, "POSITIVE": 1, "NEGATIVE": 2, "ARCHAEA": 3}

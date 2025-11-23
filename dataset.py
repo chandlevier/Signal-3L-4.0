@@ -1,4 +1,4 @@
-
+import os
 import torch
 import numpy as np
 import torch.cuda
@@ -8,7 +8,7 @@ from pathlib import Path
 from utils.label_processing_utils import process_SP
 
 import warnings
-warnings.filterwarnings("ignore", category=FutureWarning)   # 避免因为pt文件提取tensor张量生成的FutureWarning
+warnings.filterwarnings("ignore", category=FutureWarning)
 
 
 # [S: Sec/SPI signal peptide | T: Tat/SPI signal peptide | L: Sec/SPII signal peptide | I: cytoplasm | M: transmembrane | O: extracellular]
@@ -44,9 +44,9 @@ def signalp_pad_sequences(sequences: Sequence, constant_value=0, dtype=None) -> 
     elif isinstance(sequences[0], torch.Tensor):
         array = torch.full(shape, constant_value, dtype=dtype)
     elif isinstance(sequences[0], str):
-        for i, seq in enumerate(sequences):   # 用X补齐氨基酸序列
+        for i, seq in enumerate(sequences):
             if len(seq) < 70:
-                sequences[i] = seq.ljust(70, constant_value)  # 使用ljust方法将序列补齐到70
+                sequences[i] = seq.ljust(70, constant_value) 
         return sequences
 
     for arr, seq in zip(array, sequences):
@@ -58,15 +58,12 @@ def signalp_pad_sequences(sequences: Sequence, constant_value=0, dtype=None) -> 
 
 def parse_twoline_fasta(filepath: Union[str, Path], maxlen: int = 70):
     with open(filepath, "r") as f:
-        lines = f.read().splitlines()  # f.readlines()
+        lines = f.read().splitlines()
         identifiers = lines[::2]
         sequences = lines[1::2]
     sequences = [seq[:maxlen] for seq in sequences]
     return identifiers, sequences
 
-
-
-# 参考SignalP6.0的数据集定义
 class SPDataset(Dataset):
     """Converts label sequences to array for DAN.
     esm_alphabet:       esm alphabet to yield esm token of sequence
@@ -83,6 +80,8 @@ class SPDataset(Dataset):
         max_len,
         fasta_data_path: Union[str, Path],   
         pdb_data_dir: Union[str, Path],
+        seq_emb_dir: Union[str, Path],
+        struc_emb_dir: Union[str, Path],
         partition_id: List[str] = [0, 1, 2],
         kingdom_id: List[str] = ["EUKARYA", "ARCHAEA", "NEGATIVE", "POSITIVE"],
         type_id: List[str] = ["LIPO", "NO_SP", "SP", "TAT", "TATLIPO", "PILIN"],
@@ -94,12 +93,10 @@ class SPDataset(Dataset):
         label_vocab=None,
         vary_n_region=False,
         seq_emb_mode='saprot',
-        pdb_emb_mode='foldexplorer',
     ):
 
         super().__init__()
 
-        # set up parameters
         self.data_file = Path(fasta_data_path)
         if not self.data_file.exists():
             raise FileNotFoundError(self.data_file)
@@ -107,6 +104,9 @@ class SPDataset(Dataset):
             self.is_signalp = True
         else:
             self.is_signalp = False
+            
+        self.seq_emb_dir = seq_emb_dir
+        self.struc_emb_dir = struc_emb_dir
 
         self.add_special_tokens = add_special_tokens
         self.device = device
@@ -124,7 +124,6 @@ class SPDataset(Dataset):
         self.vary_n_region = vary_n_region
         self.pdb_dir = pdb_data_dir
         self.seq_emb_mode = seq_emb_mode
-        self.pdb_emb_mode = pdb_emb_mode
 
         # Load and filter the data
         self.identifiers, self.sequences = parse_twoline_fasta(self.data_file, maxlen=self.max_len)
@@ -139,8 +138,6 @@ class SPDataset(Dataset):
         return len(self.sequences)
 
     def __getitem__(self, index):
-        """调用dataloader后返回数据的函数
-        batchsize为多少就会调用这个函数多少次"""
         item = self.sequences[index]
         acc = self.accession[index]
         labels = self.labels[index]
@@ -156,14 +153,9 @@ class SPDataset(Dataset):
         trunc_seq = min(len(item), self.max_len)
         seq_token = self.trans_seq(item, self.max_len)
 
-        # 先嵌入再截断
         with torch.no_grad():
-            dir = 'signalp_70' if self.is_signalp else 'ECO269'
-            seq_embedding = torch.load(f"Output/ESM2/{dir}/{acc}.pt")['representations'][33][:trunc_seq, :].to(self.device)
-            if self.pdb_emb_mode == 'foldseek':
-                pdb_embedding = torch.tensor(torch.load(f'Output/foldseek/{dir}/{acc}.pt')).to(self.device)
-            elif self.pdb_emb_mode == 'foldexplorer':
-                pdb_embedding = torch.tensor(self.foldexplorerdict[f'{acc}.pdb']).to(self.device)   # 512维
+            seq_embedding = torch.load(os.path.join(self.seq_emb_dir, f"{acc}.pt"))['representations'][33][:trunc_seq, :].to(self.device)
+            pdb_embedding = torch.tensor(torch.load(os.path.join(self.struc_emb_dir, f"{acc}.pt"))).to(self.device)
             
         input_mask = np.ones_like(seq_token)
         
@@ -199,9 +191,9 @@ class SPDataset(Dataset):
             label_matrix = np.zeros((70, 37))
             
         return_tuple = (
-            seq_token,  # USPNet需要序列输入
-            seq_embedding,  # (70, 1280)的esm embedding
-            pdb_embedding,  # (70, 2)的foldseek embedding
+            seq_token,
+            seq_embedding,
+            pdb_embedding,
             label_matrix, 
             input_mask,
             acc,
@@ -230,13 +222,10 @@ class SPDataset(Dataset):
         seq_tokens, input_emb, pdb_emb, label_ids, mask, acc_list, global_label_ids, cleavage_sites, kingdom_ids = tuple(
             zip(*batch)
         )
-        # seq_token不需要补齐，已经在trans_seq类方法中用0补齐了
         
         input_emb = signalp_pad_sequences(input_emb, 0)
-        if self.pdb_emb_mode == 'foldseek':
-            pdb_emb = signalp_pad_sequences(pdb_emb, 0)
-        elif self.pdb_emb_mode == 'foldexplorer':
-            pdb_emb = pdb_emb
+        pdb_emb = signalp_pad_sequences(pdb_emb, 0)
+        
         # ignore_index is -1
         targets = signalp_pad_sequences(label_ids, -1)
         targets = np.stack(targets)
@@ -258,10 +247,6 @@ class SPDataset(Dataset):
     def trans_seq(self, seq, padding_length):
         # Translates amino acids into numbers
         a = []
-        # ProtBERT的vocab:
-        # OrderedDict([('[PAD]', 0), ('[UNK]', 1), ('[CLS]', 2), ('[SEP]', 3), ('[MASK]', 4), ('L', 5), ('A', 6), ('G', 7), ('V', 8), ('E', 9), ('S', 10), ('I', 11), ('K', 12), ('R', 13), 
-        # ('D', 14), ('T', 15), ('P', 16), ('N', 17), ('Q', 18), ('F', 19), ('Y', 20), ('M', 21), ('H', 22), ('C', 23), ('W', 24), ('X', 25), ('U', 26), ('B', 27), ('Z', 28), ('O', 29)])
-        # trans_dict = {'A':1,'C':2,'D':3,'E':4,'F':5,'G':6,'H':7,'I':8,'K':9,'L':10,'M':11,'N':12,'P':13,'Q':14,'R':15,'S':16,'T':17,'V':18,'W':19,'Y':20,'X':0}
         trans_dict = {'[PAD]': 0, '[UNK]': 1, '[CLS]': 2, '[SEP]': 3, '[MASK]': 4, 'L': 5, 'A': 6, 'G': 7, 'V': 8, 'E': 9, 'S': 10, 'I': 11, 'K': 12, 'R': 13, 'D': 14, 'T': 15, 'P': 16, 'N': 17, 'Q': 18, 'F': 19, 'Y': 20, 'M': 21, 'H': 22, 'C': 23, 'W': 24, 'X': 25, 'U': 26, 'B': 27, 'Z': 28, 'O': 29}
 
         for i in range(len(seq)):
