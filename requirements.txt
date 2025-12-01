@@ -12,13 +12,13 @@ beautifulsoup4==4.12.3
 biopython==1.83
 bioservices==1.11.2
 blosc2==2.0.0
-Brotli @ file:///croot/brotli-split_1714483155106/work
+Brotli==1.0.9
 catboost==1.2.7
 cattrs==24.1.2
-certifi @ file:///home/conda/feedstock_root/build_artifacts/certifi_1725278078093/work/certifi
-charset-normalizer @ file:///croot/charset-normalizer_1721748349566/work
+certifi==2024.8.30
+charset-normalizer==3.3.2
 click==8.1.7
-colorama @ file:///home/conda/feedstock_root/build_artifacts/colorama_1666700638685/work
+colorama==0.4.6
 colorlog==6.9.0
 contourpy==1.1.1
 cryptacular==1.6.2
@@ -41,7 +41,7 @@ filelock==3.16.1
 fonttools==4.54.1
 freesasa==2.2.1
 frozenlist==1.4.1
-fsspec @ file:///home/conda/feedstock_root/build_artifacts/fsspec_1725543257300/work
+fsspec==2024.9.0
 gevent==24.2.1
 gitdb==4.0.11
 GitPython==3.1.43
@@ -51,21 +51,21 @@ grequests==0.7.0
 h5py==3.11.0
 huggingface-hub==0.26.1
 hupper==1.12.1
-idna @ file:///croot/idna_1714398848350/work
+idna
 importlib_metadata==8.5.0
 importlib_resources==6.4.5
 Jinja2==3.1.4
 joblib==1.4.2
 kiwisolver==1.4.7
-lightning-utilities @ file:///home/conda/feedstock_root/build_artifacts/lightning-utilities_1729059767967/work
+lightning-utilities
 line_profiler==4.2.0
 llvmlite==0.41.1
 lmdb==1.5.1
 lxml==5.3.0
 MarkupSafe==2.1.5
 matplotlib==3.7.5
-mkl-fft @ file:///croot/mkl_fft_1695058164594/work
-mkl-random @ file:///croot/mkl_random_1695059800811/work
+mkl-fft
+mkl-random
 mkl-service==2.4.0
 mpmath==1.3.0
 msgpack==1.1.0
@@ -77,7 +77,7 @@ networkx==3.1
 ninja==1.11.1.1
 numba==0.58.1
 numexpr==2.8.6
-numpy @ file:///work/mkl/numpy_and_numpy_base_1682953417311/work
+numpy
 nvidia-cublas-cu12==12.1.3.1
 nvidia-cuda-cupti-cu12==12.1.105
 nvidia-cuda-nvrtc-cu12==12.1.105
@@ -92,14 +92,14 @@ nvidia-nvjitlink-cu12==12.8.61
 nvidia-nvtx-cu12==12.1.105
 oauthlib==3.2.2
 openpyxl==3.1.5
-packaging @ file:///home/conda/feedstock_root/build_artifacts/packaging_1718189413536/work
+packaging
 pandas==2.0.3
 PasteDeploy==3.1.0
 pathos==0.3.3
 pbkdf2==1.3
 peft==0.13.2
 pexpect==4.9.0
-pillow @ file:///croot/pillow_1721059439630/work
+pillow
 plaster==1.1.2
 plaster-pastedeploy==1.0.1
 platformdirs==4.3.6
@@ -116,17 +116,17 @@ pyparsing==3.1.4
 pyramid==2.0.2
 pyramid-mailer==0.15.1
 pyrr==0.10.3
-PySocks @ file:///tmp/build/80754af9/pysocks_1605305779399/work
+PySocks
 python-dateutil==2.9.0.post0
 python-dotenv==1.0.1
 python3-openid==3.2.0
-pytorch-lightning @ file:///home/conda/feedstock_root/build_artifacts/pytorch-lightning_1674869732452/work
+pytorch-lightning
 pytz==2024.2
-PyYAML @ file:///home/conda/feedstock_root/build_artifacts/pyyaml_1648757091578/work
+PyYAML
 rdkit-pypi==2022.9.5
 regex==2024.9.11
 repoze.sendmail==4.4.1
-requests @ file:///croot/requests_1721410876868/work
+requests
 requests-cache==1.2.1
 requests-oauthlib==2.0.0
 safetensors==0.5.2
@@ -135,36 +135,33 @@ scipy==1.10.1
 seaborn==0.13.2
 sentry-sdk==2.17.0
 setproctitle==1.3.3
-six @ file:///home/conda/feedstock_root/build_artifacts/six_1620240208055/work
+six
 smmap==5.0.1
 soupsieve==2.6
 SQLAlchemy==2.0.36
 suds-community==1.2.0
 sympy==1.13.3
 tables==3.8.0
-tensorboardX @ file:///home/conda/feedstock_root/build_artifacts/tensorboardx_1654638215170/work
+tensorboardX
 threadpoolctl==3.5.0
 tokenizers==0.13.3
 torch==2.4.1
 torch-geometric==2.6.1
-torch_cluster @ file:///amax/zxpiao/SPExplorer/extra_lib/torch_cluster-1.6.3%2Bpt24cu121-cp38-cp38-linux_x86_64.whl#sha256=d26871cc09a98c89e9a2d092d70d6f91f07834dcc907e3d82ccdc598fa1b9ffc
-torch_scatter @ file:///amax/zxpiao/SPExplorer/extra_lib/torch_scatter-2.1.2%2Bpt24cu121-cp38-cp38-linux_x86_64.whl#sha256=82dee594b10d869ef1a95c0816d771d471ac098d246cdf089de31255dd6dc3d1
-torch_sparse @ file:///amax/zxpiao/SPExplorer/extra_lib/torch_sparse-0.6.18%2Bpt24cu121-cp38-cp38-linux_x86_64.whl#sha256=12c53f26384a354a7e97c0fd221fb1c25d7e54e5b98847326e6a59afbe3b4482
 torchaudio==0.12.1
 torchdrug==0.2.1
-torchmetrics @ file:///home/conda/feedstock_root/build_artifacts/torchmetrics_1658640326316/work
+torchmetrics
 torchvision==0.13.1
-tqdm @ file:///home/conda/feedstock_root/build_artifacts/tqdm_1722737464726/work
+tqdm
 transaction==5.0
 transformers==4.28.0
 translationstring==1.4
 triton==3.0.0
-typing_extensions @ file:///croot/typing_extensions_1715268824938/work
+typing_extensions
 tzdata==2024.2
 umap==0.1.1
 umap-learn==0.5.6
 url-normalize==1.4.3
-urllib3 @ file:///croot/urllib3_1727769808118/work
+urllib3
 velruse==1.1.1
 venusian==3.1.1
 wandb==0.18.5
