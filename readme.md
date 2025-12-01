@@ -11,7 +11,15 @@ conda create -n signal3lv4 python=3.8
 conda activate signal3lv4
 ```
 
-## 2. Install Python Dependencies
+## 2. Install Pytorch
+
+Install PyTorch (with CUDA 12.1 support) and related packages via Conda:
+
+```bash
+pip install torch==2.4.1 torchvision==0.19.1 torchaudio==2.4.1 --index-url https://download.pytorch.org/whl/cu121
+```
+
+## 3. Install Python Dependencies
 
 Make sure you are in the project root directory (where `requirements.txt` is located), then run:
 
