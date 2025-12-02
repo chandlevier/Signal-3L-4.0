@@ -1,6 +1,6 @@
-# Signal-3L 4.0 – Environment Setup
+# Signal-3L 4.0
 
-This document describes how to set up the Python environment required to run **Signal-3L 4.0**.
+This document describes how to set up the Python environment and data required to run **Signal-3L 4.0**.
 
 ## 1. Create Conda Environment
 
@@ -64,4 +64,49 @@ Make sure you are in the project root directory (where `requirements.txt` is loc
 
 ```bash
 pip install -r requirements.txt
+```
+
+## 6. Input Data Format
+
+Signal-3L 4.0 expects input sequences in a two-line FASTA-like format:
+
+- Line 1 (header):
+  ```fasta
+  >accession|kingdom|sp_type|cs_index
+  ```
+
+- Line 2 (sequence):
+  ```fasta
+  Amino acid sequence in one line.
+  ```
+
+### 6.1 Header fields
+
+- `accession`: Any identifier for the protein, e.g. UniProt accession. (**not used** in the model computation; it is only kept for traceability.)
+- `kingdom`: Organism group of the protein, e.g. ARCHAEA, EUKARYA, POSITIVE, NEGATIVE. Used to build a **species one-hot indicator**.
+- `sp_type`: Signal peptide type label, such as: SP(Sec/SPI), LIPO(Sec/SPII), PILIN(Sec/SPIII), TAT(Tat/SPI), TATLIPO(Tat/SPII), NO_SP
+- `cs_index`: Cleavage-site index (position of the last residue in the signal peptide) used during training. The exact indexing convention should match the implementation.
+
+### 6.2 Training vs. Inference
+
+- Training phase
+  - `kingdom`, `sp_type`, and `cs_index` are required.
+  - `accession` is optional from a modeling perspective and does not affect the computation, but is typically kept for record.
+
+- Inference (prediction) phase
+  - `sp_type` and `cs_index` are not needed and can be set to placeholder values:
+    - sp_type = UNKNOWN
+    - cs_index = 0
+  - It is recommended to provide `kingdom` since the model uses a species one-hot indicator. If the organism information is unknown, set:
+    - kingdom = UNKNOWN
+
+    In this case, the model will internally use a padding encoding in place of the species one-hot vector.
+
+### 6.3 Example
+
+A typical input example for inference might look like:
+
+```fasta
+>P22063|EUKARYA|UNKNOWN|0
+MGTHARKKASLLLLVLATVALVSSPGWSFAQGTPATFGPIFEEQPIGLLFPEESAEDQVTLACRARASPP
 ```

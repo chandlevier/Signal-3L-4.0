@@ -20,7 +20,6 @@ SIGNALP_VOCAB = [
     "T",
     "L",
 ]  # NOTE eukarya only uses {'I', 'M', 'O', 'S'}
-SIGNALP_GLOBAL_LABEL_DICT = {"NO_SP": 0, "SP": 1, "LIPO": 2, "TAT": 3}
 SIGNALP_KINGDOM_DICT = {"EUKARYA": 0, "POSITIVE": 1, "NEGATIVE": 2, "ARCHAEA": 3}
 SIGNALP6_GLOBAL_LABEL_DICT = {
     "NO_SP": 0,
@@ -29,8 +28,11 @@ SIGNALP6_GLOBAL_LABEL_DICT = {
     "TAT": 3,
     "TATLIPO": 4,
     "PILIN": 5,
+    "UNKNOWN": -1
 }
 
+inv_kingdom_dict = {v: k for k, v in SIGNALP_KINGDOM_DICT.items()}
+inv_label_dict = {v: k for k, v in SIGNALP6_GLOBAL_LABEL_DICT.items()}
 
 def signalp_pad_sequences(sequences: Sequence, constant_value=0, dtype=None) -> np.ndarray:
     batch_size = len(sequences)
@@ -96,7 +98,7 @@ class SPDataset(Dataset):
     ):
 
         super().__init__()
-
+        
         self.data_file = Path(fasta_data_path)
         if not self.data_file.exists():
             raise FileNotFoundError(self.data_file)
@@ -127,12 +129,12 @@ class SPDataset(Dataset):
 
         # Load and filter the data
         self.identifiers, self.sequences = parse_twoline_fasta(self.data_file, maxlen=self.max_len)
-        self.global_labels = [x.split("|")[2] for x in self.identifiers]
-        self.labels = ['X' * 70 for _ in range(len(self.identifiers))]
-        self.cs = list(map(int, [x.split("|")[-1] for x in self.identifiers]))
         
         self.accession = [x.split("|")[0][1:] for x in self.identifiers]
         self.kingdom_ids = [x.split("|")[1] for x in self.identifiers]
+        self.global_labels = [x.split("|")[2] for x in self.identifiers]
+        self.cs = list(map(int, [x.split("|")[-1] for x in self.identifiers]))
+        self.labels = ['X' * 70 for _ in range(len(self.identifiers))]
 
     def __len__(self) -> int:
         return len(self.sequences)
@@ -141,14 +143,18 @@ class SPDataset(Dataset):
         item = self.sequences[index]
         acc = self.accession[index]
         labels = self.labels[index]
+        kingdom_ids = self.kingdom_ids[index]
         global_label = self.global_labels[index]
         
         global_label_id = self.global_label_dict[global_label]
-        kingdom_id = (
-            SIGNALP_KINGDOM_DICT[self.kingdom_ids[index]]
-            if hasattr(self, "kingdom_ids")
-            else None
-        )
+        if hasattr(self, "kingdom_ids"):
+            if kingdom_ids in SIGNALP_KINGDOM_DICT:
+                kingdom_id = SIGNALP_KINGDOM_DICT[kingdom_ids]
+                kingdom_mask = 1    # valid kingdom
+            else:
+                kingdom_id, kingdom_mask = 0, 0 # unknown kingdom
+        else:
+            kingdom_id = None
 
         trunc_seq = min(len(item), self.max_len)
         seq_token = self.trans_seq(item, self.max_len)
@@ -200,6 +206,7 @@ class SPDataset(Dataset):
             global_label_id,
             cs,
             kingdom_id,
+            kingdom_mask,
         )
 
         # Manually clear the single_embedding after returning it
@@ -214,14 +221,11 @@ class SPDataset(Dataset):
         cls_counts = Counter(global_label_id)
         cls_num_list = [cls_counts[i] for i in range(len(cls_counts))]
         return cls_num_list
-
-    
     
     def collate_fn(self, batch: List[Any]) -> Dict[str, torch.Tensor]:
         # unpack the list of tuples
-        seq_tokens, input_emb, pdb_emb, label_ids, mask, acc_list, global_label_ids, cleavage_sites, kingdom_ids = tuple(
-            zip(*batch)
-        )
+        seq_tokens, input_emb, pdb_emb, label_ids, mask, acc_list, global_label_ids, \
+            cleavage_sites, kingdom_ids, kingdom_mask = tuple(zip(*batch))
         
         input_emb = signalp_pad_sequences(input_emb, 0)
         pdb_emb = signalp_pad_sequences(pdb_emb, 0)
@@ -240,7 +244,8 @@ class SPDataset(Dataset):
             return_tuple = return_tuple + (sample_weights,)
         if hasattr(self, "kingdom_ids"):
             kingdom_ids = torch.tensor(kingdom_ids)
-            return_tuple = return_tuple + (kingdom_ids,)
+            kingdom_mask = torch.tensor(kingdom_mask)
+            return_tuple = return_tuple + (kingdom_ids, kingdom_mask, )
 
         return return_tuple
     

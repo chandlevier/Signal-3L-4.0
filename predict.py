@@ -5,24 +5,11 @@ import numpy as np
 from tqdm import tqdm
 from torch.utils.data import DataLoader
 
-from dataset import SPDataset
+from dataset import SPDataset, inv_kingdom_dict, inv_label_dict
 from Signal3L_4 import Signal3L4Config, Signal3L4
 from utils.basic_utils import save_mydict, clear_memory, setup_logger, set_randomseed
 from utils.estimate_utils import tagged_seq_to_cs_multiclass
 
-
-SIGNALP_KINGDOM_DICT = {"EUKARYA": 0, "POSITIVE": 1, "NEGATIVE": 2, "ARCHAEA": 3}
-label_dict = {
-    "NO_SP": 0,
-    "SP": 1,
-    "LIPO": 2,
-    "TAT": 3,
-    "TATLIPO": 4,
-    "PILIN": 5,
-}
-inv_kingdom_dict = {v: k for k, v in SIGNALP_KINGDOM_DICT.items()}
-inv_label_dict = {v: k for k, v in label_dict.items()}
-MAX_LEN = 70   
 
 
 def predict(model, logger, data_loader):
@@ -69,6 +56,7 @@ def predict(model, logger, data_loader):
                 glb_label_ids,
                 cs_gdts,
                 kingdom_ids,
+                kindom_mask,
             ) = batch
             seq_tokens = torch.tensor(seq_tokens).to(device)
             batch_data = batch_data.to(device)
@@ -78,8 +66,9 @@ def predict(model, logger, data_loader):
             acc_list = list(acc_list)
             glb_label_ids = glb_label_ids.to(device)
             kingdom_ids = kingdom_ids.to(device)
+            kindom_mask = kindom_mask.to(device)
             
-            global_probs, _, pos_preds, seq_attns, pdb_attns, all_attn_weights = model(seq_tokens, kingdom_ids.long(), batch_data, pdb_data, targets_bit_map, input_mask)
+            global_probs, _, pos_preds, seq_attns, pdb_attns, all_attn_weights = model(seq_tokens, kingdom_ids.long(), batch_data, pdb_data, targets_bit_map, input_mask, kindom_mask)
 
             all_targets.append(targets_bit_map.detach().cpu().numpy())
             all_glblbl_gdt.append(glb_label_ids.detach().cpu().numpy())
@@ -176,4 +165,5 @@ args = args_maker.predict_args()
 device = torch.device(f"cuda:{args.cuda_index}" if torch.cuda.is_available() else "cpu")
 torch.cuda.set_device(device.index)
 
+MAX_LEN = 70
 main(args)

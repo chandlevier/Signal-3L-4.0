@@ -13,17 +13,8 @@ from module.TransformerEncoder import TransformerEncoder
 from module.NormLayer import NormedLinear
 from utils.basic_utils import clear_memory
 
-SIGNALP_KINGDOM_DICT = {"EUKARYA": 0, "POSITIVE": 1, "NEGATIVE": 2, "ARCHAEA": 3}
-SIGNALP6_GLOBAL_LABEL_DICT = {
-    "NO_SP": 0,
-    "SP": 1,
-    "LIPO": 2,
-    "TAT": 3,
-    "TATLIPO": 4,
-    "PILIN": 5,
-}
+from dataset import SIGNALP_KINGDOM_DICT
 
-INV_SIGNALP_KINGDOM_DICT = {v: k for k, v in SIGNALP_KINGDOM_DICT.items()}
 
 SIGNALP6_CLASS_LABEL_MAP = [
     [0, 1, 2],
@@ -33,8 +24,6 @@ SIGNALP6_CLASS_LABEL_MAP = [
     [23, 24, 25, 26, 27, 28, 29, 30],
     [31, 32, 33, 34, 35, 36],
 ]
-
-
 
 class Signal3L4Config(PretrainedConfig):
 
@@ -318,11 +307,12 @@ class Signal3L4(nn.Module):
             config.crf_scaling_factor if hasattr(config, "crf_scaling_factor") else 1
         )
 
-    def forward(self, seq_tokens, kingdom_ids, embding, pdb_emb, targets, input_mask, force_states=False):
+    def forward(self, seq_tokens, kingdom_ids, embding, pdb_emb, targets, input_mask, kingdom_mask, force_states=False):
         """
         Inputs:  seq_tokens batch x (70): 蛋白质氨基酸序列数字向量
-                 embding (batch, 70, 1280): ESM2embedding
                  kingdom_ids (batch): [0,1,2,3] for eukarya, gram_positive, gram_negative, archaea
+                 embding (batch, 70, 1280): ESM2 embedding
+                 pdb_emb (batch, 70, 2): Foldseek embedding
                  targets (batch, 70, 37):
                  input_mask (batch, 70): binary tensor, 0 at padded positions
                  
@@ -334,18 +324,22 @@ class Signal3L4(nn.Module):
         ## 序列embedding初始化
         seq_emb = self.seq_linear(self.seq_embedding(seq_tokens.long()))
         pdb_emb = self.pdb_linear(pdb_emb)
+        
         # 如果采用物种信息，则embedding后拼接一下
         if self.kingdom_as_token:
             if self.kingdom_agonistic is False:
                 # Ensure that kingdom_ids has the shape (batchsize, 1) before one-hot encoding
-                if len(kingdom_ids.shape) == 1:
-                    kingdom_ids = kingdom_ids.unsqueeze(-1)  # Shape: (batchsize, 1)
-                ids_emb = F.one_hot(kingdom_ids.squeeze(-1), num_classes=len(SIGNALP_KINGDOM_DICT.keys())) # shape: (batch, 4)
-        
+                # 对于未知物种情况，对应向量设为全0
+                ids_emb = F.one_hot(kingdom_ids, num_classes=len(SIGNALP_KINGDOM_DICT.keys())) # shape: (batch, 4)
+                if kingdom_mask is not None:
+                    mask = kingdom_mask.to(ids_emb.device).view(-1, 1)     # (B,1)
+                    ids_emb = ids_emb * mask    # mask=1 -> 保留, mask=0 -> 清0
+
             else:  # 屏蔽物种信息，kingdom_id统一置零
                 if len(kingdom_ids.shape) == 1:
                     kingdom_ids = kingdom_ids.unsqueeze(-1)  # Shape: (batchsize, 1)
                 ids_emb = F.one_hot(torch.zeros_like(kingdom_ids).squeeze(-1), num_classes=len(SIGNALP_KINGDOM_DICT.keys())) # shape: (batch, 4)
+            
             ids_emb = ids_emb.unsqueeze(1).repeat(1, seq_tokens.size()[1], 1)  # shape: (batch, len, id_embdim)
             seq_emb = torch.cat([seq_emb, ids_emb], dim=2)
         
